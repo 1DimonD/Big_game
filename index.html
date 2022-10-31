@@ -1,0 +1,173 @@
+<meta charset="UTF-8" />
+<style>
+    .inline {
+		margin: 0 auto;
+        display: inline-block;
+        justify-content: center;
+    }
+	.inline > * {
+	vertical-align:middle;
+</style>
+<body style="background: cadetblue; text-align: center;">
+    <div class="inline"><canvas id="canvas" width="426" height="768"></canvas></div>
+    <div class="inline">
+		<button style="font-size: 50px;" onclick="restart()">Restart</button>
+		<p style="background: white;">Use spacebar to fly</p>
+	</div>
+</body>
+
+<script>
+    const bgImg = new Image();
+    bgImg.src = 'bg.png';
+    const canvasXSize = 426;
+    const canvasYSize = 768;
+    let speed = 100;
+    const scale = 3;
+    const y = 0;
+    const dx = -1;
+    let bgImgW;
+    let bgImgH;
+    let x = 0;
+    let ctx;
+    bgImg.onload = () => {
+        bgImgW = bgImg.width * scale;
+        bgImgH = bgImg.height * scale;
+
+        ctx = document.getElementById('canvas').getContext('2d');
+
+        draw();
+    }
+    function drawBg() {
+        if(x < 0) {
+            x += bgImgW;
+        }
+
+        if(x > canvasXSize) {
+            x -= bgImgW;
+        }
+
+        for(let i = 0; x - i*bgImgW > 0; i++) {
+            ctx.drawImage(bgImg, x - (i+1)*bgImgW, y, bgImgW, bgImgH);
+        }
+
+        ctx.drawImage(bgImg, x, y, bgImgW, bgImgH);
+        x += dx;
+    }
+
+    birdImg = new Image();
+    birdImg.src = "bird.png";
+    const birdImgWidth = 23;
+    const birdImgHeight = 26;
+    let frame = 0;
+    let birdPos = [40, 20];
+    let birdVelocity = 0;
+    const gravityVelocity = .1;
+    function drawBird() {
+        ctx.drawImage(birdImg, 0, frame*birdImgHeight, birdImgWidth, birdImgHeight,
+            birdPos[0], birdPos[1], birdImgWidth*scale, birdImgHeight*scale);
+        frame = (frame+1)%3;
+    }
+    const maxVelocity = 5;
+    function gravity() {
+        birdPos[1] = (birdPos[1] + birdVelocity) % canvasYSize;
+        if (birdPos[1] < 0) {
+            birdPos[1] += canvasYSize;
+        }
+        if(birdVelocity < maxVelocity)
+            birdVelocity += gravityVelocity;
+    }
+
+    window.onkeydown = (e) => {
+        if(e.key === " ") {
+            birdVelocity = -4;
+        }
+    };
+
+    let score = 0;
+    function drawUI() {
+        ctx.font = "bold 48px Comic Sans MS";
+        ctx.fillStyle = "black";
+        ctx.fillText("Score: " + score, canvasXSize/2-30, 50);
+    }
+
+    let tubes = [];
+    const dist = 300;
+    let tik = 0;
+    const tubeImg = new Image();
+    const tubeW = 28;
+    const tubeH = 400;
+    tubeImg.src = "tubes.png";
+    function generateTubes() {
+        if(tik > dist) {
+            tubes.push([canvasXSize, Math.floor(Math.random()*(canvasYSize-scale*birdImgHeight))]);
+            tik = 0;
+        } else {
+            tik += 1;
+        }
+    }
+    function drawTube(position) {
+        ctx.drawImage(tubeImg, 0, 0, tubeW, tubeH, position[0], position[1] - scale*tubeH, tubeW*scale, tubeH*scale);
+        ctx.drawImage(tubeImg, tubeW, 0, tubeW, tubeH, position[0], position[1] + 2*scale*birdImgHeight, tubeW*scale, tubeH*scale);
+    }
+
+    function checkScore() {
+        tubes.forEach(x => {if(x[0] == birdPos[0]) score += 1;});
+    }
+
+    let isDead = false;
+    function death() {
+        tubes.forEach(x => {
+            if(
+                (birdPos[0] + scale*birdImgWidth - 5 >= x[0] && birdPos[0] + 3*5 <= x[0] + scale*tubeW
+                ) && (
+                    birdPos[1] + 3*10 < x[1] || birdPos[1] + scale*birdImgHeight - 30 > x[1] + 2*scale*birdImgHeight
+                )
+            ) {
+
+                ctx.fillStyle = "red";
+                ctx.fillText("GAME OVER", canvasXSize/5, canvasYSize/2);
+                isDead = true;
+            }
+        });
+    }
+
+    function draw() {
+        if(isDead) {
+            return;
+        }
+
+        ctx.clearRect(0, 0, canvasXSize, canvasYSize);
+
+        drawBg();
+        drawBird();
+        gravity();
+        generateTubes();
+        tubes.forEach(x => {
+            drawTube(x);
+            x[0]+=dx;
+        });
+        tubes = tubes.filter(x => x[0] > -tubeW*scale);
+        checkScore();
+        drawUI();
+        death();
+        speed += .01;
+        setTimeout(draw, 1000 / speed);
+    }
+
+    function restart() {
+        if(isDead) {
+            isDead = false;
+            speed = 100;
+            birdPos = [40, 20];
+            score = 0;
+            tubes = [];
+            draw();
+        }
+    }
+	
+	window.addEventListener('keydown', function(e) {
+	if(e.keyCode == 32 && e.target == document.body) {
+		e.preventDefault();
+	}
+	});
+</script>
